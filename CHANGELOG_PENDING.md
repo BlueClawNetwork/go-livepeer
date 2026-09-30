@@ -18,6 +18,8 @@
 
 ### Bug Fixes 🐞
 
+- Remote signer: `-remoteDiscovery` fetched each orchestrator's `/discovery` with a verifying HTTP client and failed against the self-signed certificate every orchestrator serves, while the gRPC call to the same node succeeded; the fetch now skips verification like the rest of the node's orchestrator calls.
+
 #### General
 
 #### Broadcaster

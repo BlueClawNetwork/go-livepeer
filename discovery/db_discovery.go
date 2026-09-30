@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +29,14 @@ import (
 const orchestratorEndpointDiscoveryMaxBytes = 1 << 20
 
 var orchestratorEndpointDiscoveryTimeout = 2 * time.Second
+
+// Orchestrators serve a self-signed certificate; every other client call to
+// them (gRPC, segments, AI) skips verification, and the discovery fetch does
+// the same so a remote signer can see their runners.
+var orchestratorEndpointDiscoveryClient = &http.Client{
+	Timeout:   orchestratorEndpointDiscoveryTimeout,
+	Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+}
 
 type ticketParamsValidator interface {
 	ValidateTicketParams(ticketParams *pm.TicketParams) error
@@ -673,8 +682,7 @@ func callOrchestratorDiscovery(ctx context.Context, orchURI *url.URL) (json.RawM
 		return nil, err
 	}
 
-	client := &http.Client{Timeout: orchestratorEndpointDiscoveryTimeout}
-	resp, err := client.Do(req)
+	resp, err := orchestratorEndpointDiscoveryClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
