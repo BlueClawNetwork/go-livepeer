@@ -2421,6 +2421,20 @@ func TestFetchOrchestratorEndpointDiscovery(t *testing.T) {
 		require.Contains(t, string(entries[1]["runners"]), "live-video-to-video/model-a")
 	})
 
+	t.Run("self-signed certificate is accepted like the gRPC path", func(t *testing.T) {
+		ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "/discovery", r.URL.Path)
+			_, _ = w.Write([]byte(`[{"address":"https://self-signed.example","runners":[{"app":"blueclaw/chat/test"}]}]`))
+		}))
+		defer ts.Close()
+
+		orchURI, err := url.ParseRequestURI(ts.URL)
+		require.NoError(t, err)
+		discovery, err := callOrchestratorDiscovery(context.Background(), orchURI)
+		require.NoError(t, err)
+		require.Contains(t, string(discovery), "blueclaw/chat/test")
+	})
+
 	t.Run("non-200 is non-fatal error", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadGateway)
